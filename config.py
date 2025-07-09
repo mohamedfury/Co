@@ -1,7 +1,7 @@
 # config.py
 
 # توكن البوت من BotFather
-TOKEN = "947886484:AAEh5j-gECZEN8BT45FDnPDgAQBEruA2FkE"
+TOKEN = "947886484:AAGIrivrgQTNVR5K5QOJ5HhldksgqOYN6Pg"
 
 # آيدي المطور الأساسي (يفضل int أو قائمة للتمديد)
 OWNER_ID = 674291793
