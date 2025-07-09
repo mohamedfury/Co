@@ -22,6 +22,7 @@ def load_list(filename, chat_id):
     return data.get(str(chat_id), [])
 
 def save_list(filename, chat_id, items):
+    # تأكد من وجود الملف
     if not os.path.exists(filename):
         with open(filename, "w", encoding="utf-8") as f:
             json.dump({}, f)
@@ -98,21 +99,21 @@ def register(bot):
         add_to_list(FILES["owners"], message.chat.id, user_id)
         bot.reply_to(message, "تم رفع العضو مالك ✅")
 
-    # تاك للكل (تنبيه: تنفيذ جماعي قد يسبب حظر البوت من تليجرام)
-    @bot.message_handler(commands=['تاك'])
-    def tag_all(message: Message):
-        members = []  # يجب جلب قائمة الأعضاء من قاعدة بياناتك أو من API تليجرام بحذر
-        text = ""
-        for uid in members:
-            text += f"[{uid}](tg://user?id={uid}) "
-        bot.send_message(message.chat.id, text or "لا يوجد أعضاء يمكن عمل تاك لهم.", parse_mode="Markdown")
+    # قائمة المالكين
+    @bot.message_handler(commands=['المالكين'])
+    def owners_list(message: Message):
+        owners = load_list(FILES["owners"], message.chat.id)
+        text = "قائمة المالكين:\n" + list_to_text(owners, bot, message.chat.id)
+        bot.reply_to(message, text, parse_mode="Markdown")
 
     # منع عضو
     @bot.message_handler(commands=['منع'])
     def block_user(message: Message):
         if not message.reply_to_message:
             return bot.reply_to(message, "رد على العضو لمنعه.")
-        user_id =.reply_to(message, "تم منع العضو.")
+        user_id = message.reply_to_message.from_user.id
+        add_to_list(FILES["blocks"], message.chat.id, user_id)
+        bot.reply_to(message, "تم منع العضو.")
 
     # الغاء منع
     @bot.message_handler(commands=['الغاء_منع'])
@@ -125,8 +126,13 @@ def register(bot):
 
     # حظر
     @bot.message_handler(commands=['حظر'])
-    def ban_user(message: Message_id)
-       _to(message, "تم حظر العضو 🚫")
+    def ban_user(message: Message):
+        if not message.reply_to_message:
+            return bot.reply_to(message, "رد على العضو لحظره.")
+        user_id = message.reply_to_message.from_user.id
+        bot.kick_chat_member(message.chat.id, user_id)
+        add_to_list(FILES["bans"], message.chat.id, user_id)
+        bot.reply_to(message, "تم حظر العضو 🚫")
 
     # الغاء حظر
     @bot.message_handler(commands=['الغاء_حظر'])
@@ -139,7 +145,13 @@ def register(bot):
         bot.reply_to(message, "تم الغاء حظر العضو.")
 
     # طرد
-    @.reply_to(message, "تم طرد العضو 👋")
+    @bot.message_handler(commands=['طرد'])
+    def kick_user(message: Message):
+        if not message.reply_to_message:
+            return bot.reply_to(message, "رد على العضو لطرده.")
+        user_id = message.reply_to_message.from_user.id
+        bot.kick_chat_member(message.chat.id, user_id)
+        bot.reply_to(message, "تم طرد العضو 👋")
 
     # تثبيت
     @bot.message_handler(commands=['تثبيت'])
@@ -147,6 +159,8 @@ def register(bot):
         if message.reply_to_message:
             bot.pin_chat_message(message.chat.id, message.reply_to_message.message_id)
             bot.reply_to(message, "تم تثبيت الرسالة.")
+        else:
+            bot.reply_to(message, "رد على رسالة لتثبيتها.")
 
     # الغاء تثبيت
     @bot.message_handler(commands=['الغاء_تثبيت'])
@@ -171,7 +185,7 @@ def register(bot):
             return bot.reply_to(message, "رد على العضو لالغاء الكتم.")
         user_id = message.reply_to_message.from_user.id
         bot.restrict_chat_member(message.chat.id, user_id, can_send_messages=True)
-        remove_from_list(FILES[".chat.id, user_id)
+        remove_from_list(FILES["mutes"], message.chat.id, user_id)
         bot.reply_to(message, "تم الغاء كتم العضو.")
 
     # تقييد
@@ -180,6 +194,40 @@ def register(bot):
         if not message.reply_to_message:
             return bot.reply_to(message, "رد على العضو لتقييده.")
         user_id = message.reply_to_message.from_user.id
-        bot.restrict_chat_member(message.chat.id, user_id, can_send_messages=False, can_send_media_messages=False, can_send_polls=False, can_add_web_page_previews=False)
-        add_to_list(FILES["restricts"],.id)
-        bot.reply_to(message, text, parse_mode="Markdown")
+        bot.restrict_chat_member(
+            message.chat.id, user_id, 
+            can_send_messages=False, 
+            can_send_media_messages=False, 
+            can_send_polls=False, 
+            can_add_web_page_previews=False
+        )
+        add_to_list(FILES["restricts"], message.chat.id, user_id)
+        bot.reply_to(message, "تم تقييد العضو.")
+
+    # الغاء تقييد
+    @bot.message_handler(commands=['الغاء_تقييد'])
+    def unrestrict_user(message: Message):
+        if not message.reply_to_message:
+            return bot.reply_to(message, "رد على العضو لالغاء التقييد.")
+        user_id = message.reply_to_message.from_user.id
+        bot.restrict_chat_member(
+            message.chat.id, user_id, 
+            can_send_messages=True, 
+            can_send_media_messages=True, 
+            can_send_polls=True, 
+            can_add_web_page_previews=True
+        )
+        remove_from_list(FILES["restricts"], message.chat.id, user_id)
+        bot.reply_to(message, "تم الغاء تقييد العضو.")
+
+    # تاك للكل (تحذير: قد يسبب سبام!)
+    @bot.message_handler(commands=['تاك'])
+    def tag_all(message: Message):
+        # هذا مثال بسيط - للحصول على جميع الأعضاء يتطلب ذلك حفظهم في قاعدة بيانات أو استخدام getChatAdministrators أو getChatMembers (حذر جداً)
+        admins = bot.get_chat_administrators(message.chat.id)
+        text = ""
+        for admin in admins:
+            user = admin.user
+            name = user.first_name
+            text += f"[{name}](tg://user?id={user.id}) "
+        bot.send_message(message.chat.id, text or "لا يوجد أعضاء يمكن عمل تاك لهم.", parse_mode="Markdown")
