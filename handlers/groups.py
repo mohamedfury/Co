@@ -1,5 +1,3 @@
-# handlers/groups.py
-
 import os
 import json
 from telebot.types import Message
@@ -19,6 +17,7 @@ def load_settings(chat_id):
 
 def save_settings(chat_id, settings):
     if not os.path.exists(SETTINGS_FILE):
+        os.makedirs(DATA, exist_ok=True)
         with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
             json.dump({}, f)
     with open(SETTINGS_FILE, encoding="utf-8") as f:
@@ -36,6 +35,7 @@ def load_textfile(filename, chat_id):
 
 def save_textfile(filename, chat_id, text):
     if not os.path.exists(filename):
+        os.makedirs(DATA, exist_ok=True)
         with open(filename, "w", encoding="utf-8") as f:
             json.dump({}, f)
     with open(filename, encoding="utf-8") as f:
