@@ -10,7 +10,7 @@ PROTECTION_FILE = os.path.join(DATA, "protection_settings.json")
 BLOCKED_WORDS_FILE = os.path.join(DATA, "blocked_words.json")
 
 def load_settings(chat_id):
-    if.path.exists(PROTECTION_FILE):
+    if not os.path.exists(PROTECTION_FILE):  # صححت if الشرط هنا
         return {}
     with open(PROTECTION_FILE, encoding="utf-8") as f:
         data = json.load(f)
@@ -79,7 +79,8 @@ def register(bot):
             settings['flood'] = True
             status = "تم تفعيل مكافحة التكرار."
         else:
-            settings[' التكرار."
+            settings['flood'] = False  # صححت هنا السطر الغير مكتمل
+            status = "تم تعطيل مكافحة التكرار."
         save_settings(message.chat.id, settings)
         bot.reply_to(message, status)
 
