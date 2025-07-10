@@ -1,3 +1,5 @@
+# handlers/managers.py
+
 import os
 import json
 from telebot.types import Message
@@ -24,39 +26,45 @@ def save_managers(chat_id, managers):
 
 def register(bot):
 
-    @bot.message_handler(commands=['رفع_ادمن'])
+    @bot.message_handler(commands=["رفع_مدير"])
     def add_manager(message: Message):
         if not message.reply_to_message:
-            return bot.reply_to(message, "قم بالرد على رسالة العضو الذي تريد رفعه أدمن.")
+            return bot.reply_to(message, "📌 الرجاء الرد على رسالة المستخدم الذي تريد رفعه مدير.")
         user_id = message.reply_to_message.from_user.id
         chat_id = message.chat.id
         managers = load_managers(chat_id)
         if user_id in managers:
-            return bot.reply_to(message, "هذا العضو بالفعل أدمن.")
+            return bot.reply_to(message, "⚠️ هذا المستخدم مدير بالفعل.")
         managers.append(user_id)
         save_managers(chat_id, managers)
-        bot.reply_to(message, "تم رفع العضو أدمن.")
+        bot.reply_to(message, "✅ تم رفع المستخدم مدير.")
 
-    @bot.message_handler(commands=['تنزيل_ادمن'])
+    @bot.message_handler(commands=["تنزيل_مدير"])
     def remove_manager(message: Message):
         if not message.reply_to_message:
-            return bot.reply_to(message, "قم بالرد على رسالة العضو الذي تريد تنزيله من الأدمنية.")
+            return bot.reply_to(message, "📌 الرجاء الرد على رسالة المستخدم الذي تريد تنزيله من المديرين.")
         user_id = message.reply_to_message.from_user.id
         chat_id = message.chat.id
         managers = load_managers(chat_id)
         if user_id not in managers:
-            return bot.reply_to(message, "هذا العضو ليس أدمن.")
+            return bot.reply_to(message, "⚠️ هذا المستخدم ليس مدير.")
         managers.remove(user_id)
         save_managers(chat_id, managers)
-        bot.reply_to(message, "تم تنزيل العضو من الأدمنية.")
+        bot.reply_to(message, "✅ تم تنزيل المستخدم من المديرين.")
 
-    @bot.message_handler(commands=['الادمنيه'])
+    @bot.message_handler(commands=["المديرين"])
     def list_managers(message: Message):
         chat_id = message.chat.id
         managers = load_managers(chat_id)
         if not managers:
-            return bot.reply_to(message, "لا يوجد أدمنية في هذه المجموعة.")
-        text = "📋 قائمة الأدمنية:\n"
-        for user_id in managers:
-            text += f"• `{user_id}`\n"
+            return bot.reply_to(message, "لا يوجد مديرين في هذه المجموعة.")
+        text = "👥 قائمة المديرين:\n"
+        for uid in managers:
+            text += f"• [{uid}](tg://user?id={uid})\n"
         bot.reply_to(message, text, parse_mode="Markdown")
+
+    @bot.message_handler(commands=["مسح_المديرين"])
+    def clear_managers(message: Message):
+        chat_id = message.chat.id
+        save_managers(chat_id, [])
+        bot.reply_to(message, "🗑 تم مسح جميع المديرين.")
