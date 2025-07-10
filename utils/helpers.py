@@ -35,7 +35,7 @@ def time_since(dt):
         return f"قبل {d} يوم"
 
 def mention(user: User, name=None):
-    """توليد منشن تليجرام بالاسم"""
+    """توليد منشن تليجرام بالاسم (Markdown)"""
     if not name:
         name = user.first_name or "مستخدم"
     return f"[{name}](tg://user?id={user.id})"
@@ -53,14 +53,17 @@ def extract_user_id(message: Message, fallback=None):
     if message.reply_to_message:
         return message.reply_to_message.from_user.id
     entities = getattr(message, "entities", []) or []
-    # بحث عن منشن
+    # بحث عن منشن نصي
     for entity in entities:
         if entity.type == "text_mention":
             return entity.user.id
-    # بحث عن رقم في النص
+    # محاولة استخراج رقم من آخر كلمة في النص (تأكد أنها رقم)
     try:
-        num = int(message.text.split()[-1])
-        return num
+        last_word = message.text.split()[-1]
+        if last_word.isdigit():
+            return int(last_word)
+        else:
+            return fallback
     except Exception:
         return fallback
 
@@ -70,7 +73,7 @@ def get_chat_title(chat):
 
 def escape_markdown(text):
     """هروب رموز markdown في نص"""
-    symbols = r"\_*[]()~`>#+-=|{}.!"
+    symbols = r"\_*[]()~`>#+-=|{}.!-"  # يمكن تعديلها حسب نسخة الماركدون
     for ch in symbols:
         text = text.replace(ch, f"\\{ch}")
     return text
@@ -91,10 +94,3 @@ def get_user_info_text(user: User, role=None):
         f"🏷 اسم المستخدم: {get_username(user)}"
         f"{role_part}"
     )
-
-# يمكنك إضافة أدوات أخرى حسب الحاجة!
-
-# مثال استخدام:
-# from utils import helpers
-# text = helpers.mention(user)
-# date = helpers.format_time()
