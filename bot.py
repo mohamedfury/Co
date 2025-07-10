@@ -5,7 +5,7 @@ from config import TOKEN
 # استيراد نصوص الأوامر من ملف خارجي
 import messages
 
-# استيراد جميع الملفات (handlers) التي فيها register(bot)
+# استيراد جميع الملفات التي تحتوي على دالة register(bot)
 from handlers import (
     admin, groups, protection, managers, owners, creators, members,
     fun, bank, shop, welcome, inline, broadcast, stats, utils as handlers_utils
@@ -41,7 +41,7 @@ def send_main_menu(chat_id, message_id=None):
         bot.send_message(chat_id, text, reply_markup=markup)
 
 # ----------- عرض القائمة عند كلمة "اوامر" أو "مساعدة" -----------
-@bot.message_handler(func=lambda m: m.text and ("اوامر" in m.text or "مساعدة" in m.text))
+@bot.message_handler(func=lambda m: m.text is not None and ("اوامر" in m.text or "مساعدة" in m.text))
 def show_menu(message):
     send_main_menu(message.chat.id)
 
@@ -85,8 +85,3 @@ def back_to_main_menu(call):
 if __name__ == "__main__":
     print("🤖 Bot Started...")
     bot.infinity_polling()
-
-@bot.message_handler(func=lambda m: True)
-def test_all(message):
-    print("رسالة مستلمة:", message.text)
-    bot.reply_to(message, "✅ استلمت: " + message.text)
