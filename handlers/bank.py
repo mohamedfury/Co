@@ -1,99 +1,53 @@
-# handlers/bank.py
-
 import os
 import json
 from telebot.types import Message
 
 DATA = "data"
-BANK_FILE = os.path.join(DATA, "bank.json")
+BANK_FILE = os.path.join(DATA, "bank_accounts.json")
 
-def load_balances():
+def load_bank_data():
     if not os.path.exists(BANK_FILE):
         return {}
     with open(BANK_FILE, encoding="utf-8") as f:
-        return json.load(f)
+        try:
+            return json.load(f)
+        except Exception:
+            return {}
 
-def save_balances(balances):
+def save_bank_data(data):
     with open(BANK_FILE, "w", encoding="utf-8") as f:
-        json.dump(balances, f, ensure_ascii=False, indent=2)
-
-def get_balance(user_id):
-    balances = load_balances()
-    return balances.get(str(user_id), 0)
-
-def set_balance(user_id, amount):
-    balances = load_balances()
-    balances[str(user_id)] = amount
-    save_balances(balances)
-
-def add_balance(user_id, amount):
-    balances = load_balances()
-    balances[str(user_id)] = balances.get(str(user_id), 0) + amount
-    save_balances(balances)
-
-def deduct_balance(user_id, amount):
-    balances = load_balances()
-    current = balances.get(str(user_id), 0)
-    balances[str(user_id)] = max(0, current - amount)
-    save_balances(balances)
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
 def register(bot):
-    # عرض الرصيد
-    @bot.message_handler(commands=['رصيدي'])
-    def my_balance(message: Message):
-        balance = get_balance(message.from_user.id)
-        bot.reply_to(message, f"رصيدك الحالي: {balance} نقطة.")
 
-    # إضافة نقاط (للأدمين فقط) بالرد
-    @bot.message_handler(commands=['اضافة_نقاط'])
-    def add_points(message: Message):
-        if not message.reply_to_message or len(message.text.split()) < 2:
-            return bot.reply_to(message, "استخدم: اضافة_نقاط 50 (بالرد على العضو)")
-        try:
-            amount = int(message.text.split()[1])
-        except Exception:
-            return bot.reply_to(message, "يرجى كتابة عدد النقاط بشكل صحيح.")
-        user_id = message.reply_to_message.from_user.id
-        add_balance(user_id, amount)
-        bot.reply_to(message, f"تم إضافة {amount} نقطة للعضو.")
+    @bot.message_handler(commands=['انشاء_حساب'])
+    def create_account(message: Message):
+        user_id = str(message.from_user.id)
+        bank_data = load_bank_data()
+        if user_id in bank_data:
+            bot.reply_to(message, "❗️ لديك حساب بنكي بالفعل.")
+        else:
+            bank_data[user_id] = {
+                "balance": 0,
+                "debt": 0,
+                "last_salary": 0
+            }
+            save_bank_data(bank_data)
+            bot.reply_to(message, "✅ تم إنشاء حسابك البنكي بنجاح.")
 
-    # خصم نقاط (للأدمين فقط) بالرد
-    @bot.message_handler(commands=['خصم_نقاط'])
-    def deduct_points(message: Message):
-        if not message.reply_to_message or len(message.text.split()) < 2:
-            return bot.reply_to(message, "استخدم: خصم_نقاط 20 (بالرد على العضو)")
-        try:
-            amount = int(message.text.split()[1])
-        except Exception:
-            return bot.reply_to(message, "يرجى كتابة عدد النقاط بشكل صحيح.")
-        user_id = message.reply_to_message.from_user.id
-        deduct_balance(user_id, amount)
-        bot.reply_to(message, f"تم خصم {amount} نقطة من العضو.")
+    @bot.message_handler(commands=['حسابي'])
+    def account_info(message: Message):
+        user_id = str(message.from_user.id)
+        bank_data = load_bank_data()
+        if user_id not in bank_data:
+            bot.reply_to(message, "❗️ ليس لديك حساب بنكي، أنشئ حساب أولاً باستخدام /انشاء_حساب")
+            return
+        account = bank_data[user_id]
+        text = (
+            f"💰 رصيدك الحالي: {account.get('balance', 0)} ريال\n"
+            f"💸 الدين: {account.get('debt', 0)} ريال\n"
+            f"🎁 آخر راتب استلمته: {account.get('last_salary', 0)} ريال"
+        )
+        bot.reply_to(message, text)
 
-    # تحويل نقاط (من عضو لعضو)
-    @bot.message_handler(commands=['تحويل'])
-    def transfer_points(message: Message):
-        if not message.reply_to_message or len(message.text.split()) < 2:
-            return bot.reply_to(message, "استخدم: تحويل 10 (بالرد على العضو المستلم)")
-        try:
-            amount = int(message.text.split()[1])
-        except Exception:
-            return bot.reply_to(message, "يرجى كتابة عدد النقاط بشكل صحيح.")
-        from_id = message.from_user.id
-        to_id = message.reply_to_message.from_user.id
-        if from_id == to_id:
-            return bot.reply_to(message, "لا يمكنك تحويل نقاط لنفسك.")
-        if get_balance(from_id) < amount:
-            return bot.reply_to(message, "رصيدك غير كافٍ للتحويل.")
-        deduct_balance(from_id, amount)
-        add_balance(to_id, amount)
-        bot.reply_to(message, f"تم تحويل {amount} نقطة بنجاح.")
-
-    # عرض رصيد بالرد على عضو
-    @bot.message_handler(commands=['رصيد'])
-    def user_balance(message: Message):
-        if not message.reply_to_message:
-            return bot.reply_to(message, "رد على عضو لمعرفة رصيده.")
-        user = message.reply_to_message.from_user
-        balance = get_balance(user.id)
-        bot.reply_to(message, f"رصيد {user.first_name}: {balance} نقطة.")
+    # أضف أوامر أخرى متعلقة بالبنك هنا مثل تحويل، سحب، إيداع...
