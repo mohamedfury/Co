@@ -8,41 +8,50 @@ ROLES_FILE = os.path.join(DATA_DIR, "roles.json")
 def get_role(chat_id, user_id):
     """جلب الرتبة المخصصة من ملف roles.json"""
     if not os.path.exists(ROLES_FILE):
-        return None
-    with open(ROLES_FILE, encoding="utf-8") as f:
-        try:
+        return "عضو"
+    try:
+        with open(ROLES_FILE, encoding="utf-8") as f:
             roles = json.load(f)
-        except Exception:
-            return None
-    return roles.get(str(chat_id), {}).get(str(user_id), None)
+    except Exception:
+        return "عضو"
+    return roles.get(str(chat_id), {}).get(str(user_id), "عضو")
 
 def is_owner(chat_member: ChatMember):
     """هل العضو هو مالك المجموعة؟"""
+    if chat_member is None:
+        return False
     return chat_member.status == "creator"
 
 def is_admin(chat_member: ChatMember):
     """هل العضو أدمن أو مالك؟"""
+    if chat_member is None:
+        return False
     return chat_member.status in ["administrator", "creator"]
 
 def is_member(chat_member: ChatMember):
     """هل العضو عضو عادي؟"""
+    if chat_member is None:
+        return False
     return chat_member.status == "member"
 
 def is_restricted(chat_member: ChatMember):
     """هل العضو مقيّد؟"""
+    if chat_member is None:
+        return False
     return chat_member.status == "restricted"
 
 def is_banned(chat_member: ChatMember):
     """هل العضو محظور؟"""
+    if chat_member is None:
+        return False
     return chat_member.status == "kicked"
 
 def is_bot(user):
     """هل العضو بوت؟"""
     return getattr(user, "is_bot", False)
 
-# مثال دوال مع رتبك المخصصة
+# رتب مخصصة من roles.json
 def is_custom_role(chat_id, user_id, role_name):
-    """هل لدى العضو رتبة معيّنة من roles.json؟"""
     role = get_role(chat_id, user_id)
     return role == role_name
 
@@ -59,16 +68,16 @@ def is_main_owner(chat_id, user_id):
     return is_custom_role(chat_id, user_id, "مالك")
 
 def can_use_admin_cmds(bot, message: Message):
-    """دالة تحقق هل العضو يملك صلاحية أو رتبة تسمح باستخدام أوامر الأدمن"""
-    chat_member = bot.get_chat_member(message.chat.id, message.from_user.id)
-    # يمكنك تخصيص الشروط حسب نظامك
+    """تحقق إذا العضو يمكنه استخدام أوامر الأدمن"""
+    try:
+        chat_member = bot.get_chat_member(message.chat.id, message.from_user.id)
+    except Exception:
+        return False
     if is_admin(chat_member) or is_owner(chat_member):
         return True
-    # أو لو عنده رتبة مخصصة
     role = get_role(message.chat.id, message.from_user.id)
     return role in ["مدير", "منشئ", "مالك"]
 
-# مثال: استدعاء صلاحية في هاندلر
-# from utils import permissions
-# if not permissions.can_use_admin_cmds(bot, message):
+# مثال استدعاء داخل الهاندلر:
+# if not can_use_admin_cmds(bot, message):
 #     return bot.reply_to(message, "❗️ ليس لديك صلاحية تنفيذ هذا الأمر.")
