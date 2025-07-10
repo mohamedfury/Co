@@ -85,3 +85,8 @@ def back_to_main_menu(call):
 if __name__ == "__main__":
     print("🤖 Bot Started...")
     bot.infinity_polling()
+
+@bot.message_handler(func=lambda m: True)
+def test_all(message):
+    print("رسالة مستلمة:", message.text)
+    bot.reply_to(message, "✅ استلمت: " + message.text)
