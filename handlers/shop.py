@@ -1,97 +1,66 @@
-# handlers/shop.py
-
-import os
 import json
-from telebot.types import Message
+import os
+from telebot.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 
 DATA = "data"
-PRODUCTS_FILE = os.path.join(DATA, "shop_products.json")
-ORDERS_FILE = os.path.join(DATA, "shop_orders.json")
+SHOP_FILE = os.path.join(DATA, "shop_items.json")
 
-def load_products():
-    if not os.path.exists(PRODUCTS_FILE):
-        return []
-    with open(PRODUCTS_FILE, encoding="utf-8") as f:
-        return json.load(f)
+def load_shop_items():
+    if not os.path.exists(SHOP_FILE):
+        return {}
+    with open(SHOP_FILE, encoding="utf-8") as f:
+        try:
+            return json.load(f)
+        except Exception:
+            return {}
 
-def save_products(products):
-    with open(PRODUCTS_FILE, "w", encoding="utf-8") as f:
-        json.dump(products, f, ensure_ascii=False, indent=2)
-
-def load_orders():
-    if not os.path.exists(ORDERS_FILE):
-        return []
-    with open(ORDERS_FILE, encoding="utf-8") as f:
-        return json.load(f)
-
-def save_orders(orders):
-    with open(ORDERS_FILE, "w", encoding="utf-8") as f:
-        json.dump(orders, f, ensure_ascii=False, indent=2)
+def save_shop_items(items):
+    with open(SHOP_FILE, "w", encoding="utf-8") as f:
+        json.dump(items, f, ensure_ascii=False, indent=2)
 
 def register(bot):
-    # إضافة منتج (بالرد على نص المنتج: اسم - السعر - الوصف)
-    @bot.message_handler(commands=['اضافة_منتج'])
-    def add_product(message: Message):
+
+    @bot.message_handler(commands=['متجر'])
+    def show_shop(message: Message):
+        items = load_shop_items()
+        if not items:
+            bot.reply_to(message, "🚫 لا يوجد عناصر في المتجر حالياً.")
+            return
+        text = "🛒 قائمة العناصر في المتجر:\n\n"
+        for item_id, item in items.items():
+            text += f"• {item['name']} - السعر: {item['price']} نقاط\n"
+        bot.reply_to(message, text)
+
+    @bot.message_handler(commands=['اضف_عنصر'])
+    def add_item(message: Message):
         if not message.reply_to_message or not message.reply_to_message.text:
-            return bot.reply_to(message, "رد على رسالة تحتوي على: اسم المنتج - السعر - الوصف")
+            return bot.reply_to(message, "❗️ الرجاء الرد على رسالة تحتوي على اسم العنصر.")
+        name = message.reply_to_message.text.strip()
+        args = message.text.split(maxsplit=1)
+        if len(args) < 2:
+            return bot.reply_to(message, "❗️ الرجاء تحديد سعر العنصر.\nمثال: اضف_عنصر 100")
         try:
-            name, price, desc = [x.strip() for x in message.reply_to_message.text.split('-', 2)]
-        except Exception:
-            return bot.reply_to(message, "الصيغة غير صحيحة. مثال: منتج جديد - 1000 - وصف قصير")
-        products = load_products()
-        products.append({"name": name, "price": price, "desc": desc})
-        save_products(products)
-        bot.reply_to(message, f"تمت إضافة المنتج: {name}")
+            price = int(args[1])
+        except ValueError:
+            return bot.reply_to(message, "❗️ السعر يجب أن يكون رقماً صحيحاً.")
+        items = load_shop_items()
+        new_id = str(max([int(k) for k in items.keys()] + [0]) + 1)
+        items[new_id] = {"name": name, "price": price}
+        save_shop_items(items)
+        bot.reply_to(message, f"✅ تم إضافة العنصر '{name}' بسعر {price} نقاط.")
 
-    # حذف منتج (بالرد على اسم المنتج)
-    @bot.message_handler(commands=['حذف_منتج'])
-    def del_product(message: Message):
-        if not message.reply_to_message or not message.reply_to_message.text:
-            return bot.reply_to(message, "رد على اسم المنتج لحذفه")
-        name = message.reply_to_message.text.strip()
-        products = load_products()
-        filtered = [p for p in products if p["name"] != name]
-        if len(filtered) == len(products):
-            return bot.reply_to(message, "المنتج غير موجود.")
-        save_products(filtered)
-        bot.reply_to(message, f"تم حذف المنتج: {name}")
+    @bot.message_handler(commands=['مسح_عنصر'])
+    def delete_item(message: Message):
+        args = message.text.split(maxsplit=1)
+        if len(args) < 2:
+            return bot.reply_to(message, "❗️ الرجاء تحديد رقم العنصر لمسحه.\nمثال: مسح_عنصر 2")
+        item_id = args[1].strip()
+        items = load_shop_items()
+        if item_id not in items:
+            return bot.reply_to(message, "❗️ هذا العنصر غير موجود.")
+        name = items[item_id]['name']
+        del items[item_id]
+        save_shop_items(items)
+        bot.reply_to(message, f"✅ تم مسح العنصر '{name}'.")
 
-    # عرض المنتجات
-    @bot.message_handler(commands=['المنتجات'])
-    def show_products(message: Message):
-        products = load_products()
-        if not products:
-            return bot.reply_to(message, "لا توجد منتجات حالياً.")
-        text = "🛒 قائمة المنتجات:\n"
-        for idx, p in enumerate(products, 1):
-            text += f"{idx}. {p['name']} - {p['price']} : {p['desc']}\n"
-        bot.reply_to(message, text)
-
-    # شراء منتج (بالرد على اسم المنتج)
-    @bot.message_handler(commands=['شراء'])
-    def buy_product(message: Message):
-        if not message.reply_to_message or not message.reply_to_message.text:
-            return bot.reply_to(message, "رد على اسم المنتج الذي تريد شراءه")
-        name = message.reply_to_message.text.strip()
-        products = load_products()
-        product = next((p for p in products if p["name"] == name), None)
-        if not product:
-            return bot.reply_to(message, "المنتج غير موجود.")
-        orders = load_orders()
-        orders.append({"user_id": message.from_user.id, "username": message.from_user.username, "product": name})
-        save_orders(orders)
-        bot.reply_to(message, f"تم تسجيل طلبك لشراء المنتج: {name}\nسيتم التواصل معك قريباً.")
-
-    # عرض الطلبات (للأدمين فقط)
-    @bot.message_handler(commands=['الطلبات'])
-    def show_orders(message: Message):
-        # يمكنك تعديل شرط الصلاحية هنا
-        if not message.from_user.id in [123456789]:  # عدل هذا الـ ID إلى آي دي الأدمن
-            return bot.reply_to(message, "هذه الميزة للأدمن فقط.")
-        orders = load_orders()
-        if not orders:
-            return bot.reply_to(message, "لا توجد طلبات شراء بعد.")
-        text = "📦 الطلبات:\n"
-        for idx, o in enumerate(orders, 1):
-            text += f"{idx}. المستخدم: @{o['username'] or o['user_id']} - المنتج: {o['product']}\n"
-        bot.reply_to(message, text)
+    # يمكنك إضافة المزيد من أوامر المتجر مثل الشراء، العرض التفصيلي، الخ...
