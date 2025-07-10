@@ -76,9 +76,8 @@ def is_spam(message, max_msgs=6, interval=5, max_mentions=4, block_links=True):
             _save_spam(data)
             return "link"  # سبام روابط
 
-    # حماية الملصقات (يمكنك توسعتها حسب الحاجة)
+    # حماية الملصقات (بدون إضافة timestamp ثانية)
     if hasattr(message, "sticker") and message.sticker:
-        user["timestamps"].append(now)
         if len(user["timestamps"]) > max_msgs + 2:
             _save_spam(data)
             return "stickers"  # سبام ملصقات
