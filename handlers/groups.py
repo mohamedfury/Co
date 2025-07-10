@@ -138,6 +138,9 @@ def register(bot):
 
     # عرض الرابط
     @bot.message_handler(commands=['الرابط'])
-    def group_link(message.reply_to(message, f"رابط المجموعة:\n{link}")
+    def group_link(message: Message):
+        try:
+            link = bot.export_chat_invite_link(message.chat.id)
+            bot.reply_to(message, f"رابط المجموعة:\n{link}")
         except Exception:
             bot.reply_to(message, "لا يمكن جلب رابط المجموعة (تأكد أن البوت أدمن).")
