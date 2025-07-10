@@ -10,7 +10,8 @@ def _full_path(filename):
 
 def load_json(filename, default=None):
     """تحميل بيانات json من ملف، مع قيمة افتراضية في حال الخطأ"""
-    fullpath = _full if not os.path.exists(fullpath):
+    fullpath = _full_path(filename)
+    if not os.path.exists(fullpath):
         return default if default is not None else {}
     try:
         with open(fullpath, encoding="utf-8") as f:
@@ -36,7 +37,7 @@ def set_item(filename, main_key, value, sub_key=None):
     data = load_json(filename)
     main_key = str(main_key)
     if sub_key is not None:
-        if main_key not in data:
+        if main_key not in data or not isinstance(data[main_key], dict):
             data[main_key] = {}
         data[main_key][str(sub_key)] = value
     else:
@@ -49,6 +50,9 @@ def delete_item(filename, main_key, sub_key=None):
     main_key = str(main_key)
     if sub_key is not None and main_key in data and str(sub_key) in data[main_key]:
         del data[main_key][str(sub_key)]
+        # إذا أصبح القاموس الفرعي فارغاً يمكن حذفه كاملاً
+        if not data[main_key]:
+            del data[main_key]
     elif main_key in data:
         del data[main_key]
     save_json(filename, data)
@@ -56,6 +60,8 @@ def delete_item(filename, main_key, sub_key=None):
 def append_to_list(filename, item):
     """إضافة عنصر لقائمة json (مثل replies.json أو fun_lists.json)"""
     data = load_json(filename, default=[])
+    if not isinstance(data, list):
+        data = []
     if item not in data:
         data.append(item)
         save_json(filename, data)
@@ -63,6 +69,8 @@ def append_to_list(filename, item):
 def remove_from_list(filename, item):
     """حذف عنصر من قائمة json"""
     data = load_json(filename, default=[])
+    if not isinstance(data, list):
+        return
     if item in data:
         data.remove(item)
         save_json(filename, data)
@@ -73,7 +81,7 @@ def clear_file(filename):
     default = [] if ext == ".list" else {}
     save_json(filename, default)
 
-# أمثلة استخدام:
+# --- أمثلة استخدام ---
 # users = load_json("users.json")
 # set_item("users.json", chat_id, {"messages": 5, "points": 99})
 # set_item("users.json", chat_id, 10, sub_key=user_id)
