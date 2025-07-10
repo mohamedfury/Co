@@ -1,11 +1,47 @@
+import os
+import json
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import TOKEN
 
+# ملفات البيانات المطلوبة
+DATA_DIR = "data"
+FILES_TO_CREATE = [
+    "groups.json",
+    "users.json",
+    "replies.json",
+    "fun_lists.json",
+    "bank.json",
+    "shop.json",
+    "codes.json",
+    "roles.json",
+    "settings.json",
+]
+
+def ensure_storage():
+    if not os.path.exists(DATA_DIR):
+        os.makedirs(DATA_DIR)
+        print(f"✅ تم إنشاء مجلد البيانات: {DATA_DIR}")
+
+    for filename in FILES_TO_CREATE:
+        fullpath = os.path.join(DATA_DIR, filename)
+        if not os.path.exists(fullpath):
+            # حدد نوع البيانات (قائمة أو dict) حسب اسم الملف
+            if filename in ["replies.json", "fun_lists.json"]:
+                data = []  # ملفات قائمة
+            else:
+                data = {}  # ملفات dict
+            with open(fullpath, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            print(f"✅ تم إنشاء الملف: {fullpath}")
+
+# استدعي الفحص والإنشاء عند بدء التشغيل
+ensure_storage()
+
 # استيراد نصوص الأوامر من ملف خارجي
 import messages
 
-# استيراد جميع الملفات التي تحتوي على دالة register(bot)
+# استيراد جميع ملفات الأوامر التي تحتوي على دالة register(bot)
 from handlers import (
     admin, groups, protection, managers, owners, creators, members,
     fun, bank, shop, welcome, inline, broadcast, stats, utils as handlers_utils
