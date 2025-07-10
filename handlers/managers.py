@@ -1,5 +1,3 @@
-# handlers/managers.py
-
 import os
 import json
 from telebot.types import Message
@@ -24,55 +22,41 @@ def save_managers(chat_id, managers):
     with open(MANAGERS_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-def add_manager(chat_id, user_id):
-    managers = load_managers(chat_id)
-    if user_id not in managers:
+def register(bot):
+
+    @bot.message_handler(commands=['رفع_ادمن'])
+    def add_manager(message: Message):
+        if not message.reply_to_message:
+            return bot.reply_to(message, "قم بالرد على رسالة العضو الذي تريد رفعه أدمن.")
+        user_id = message.reply_to_message.from_user.id
+        chat_id = message.chat.id
+        managers = load_managers(chat_id)
+        if user_id in managers:
+            return bot.reply_to(message, "هذا العضو بالفعل أدمن.")
         managers.append(user_id)
         save_managers(chat_id, managers)
+        bot.reply_to(message, "تم رفع العضو أدمن.")
 
-def remove_manager(chat_id, user_id):
-    managers = load_managers(chat_id)
-    if user_id in managers:
+    @bot.message_handler(commands=['تنزيل_ادمن'])
+    def remove_manager(message: Message):
+        if not message.reply_to_message:
+            return bot.reply_to(message, "قم بالرد على رسالة العضو الذي تريد تنزيله من الأدمنية.")
+        user_id = message.reply_to_message.from_user.id
+        chat_id = message.chat.id
+        managers = load_managers(chat_id)
+        if user_id not in managers:
+            return bot.reply_to(message, "هذا العضو ليس أدمن.")
         managers.remove(user_id)
         save_managers(chat_id, managers)
+        bot.reply_to(message, "تم تنزيل العضو من الأدمنية.")
 
-def clear_managers(chat_id):
-    save_managers(chat_id, [])
-
-def list_to_text(items, bot, chat_id):
-    lines = []
-    for uid in items:
-        try:
-            user = bot.get_chat_member(chat_id, uid).user
-            lines.append(f"• [{user.first_name}](tg://user?id={uid})")
-        except Exception:
-            lines.append(f"• {uid}")
-    return "\n".join(lines) if lines else "لا يوجد مدراء حالياً."
-
-def register(bot):
-    @bot.message_handler(commands=['رفع_مدير'])
-    def promote_manager(message: Message):
-        if not message.reply_to_message:
-            return bot.reply_to(message, "رد على العضو لرفعه مدير.")
-        user_id = message.reply_to_message.from_user.id
-        add_manager(message.chat.id, user_id)
-        bot.reply_to(message, "تم رفع العضو مدير ✅")
-
-    @bot.message_handler(commands=['تنزيل_مدير'])
-    def demote_manager(message: Message):
-        if not message.reply_to_message:
-            return bot.reply_to(message, "رد على العضو لتنزيله من المدراء.")
-        user_id = message.reply_to_message.from_user.id
-        remove_manager(message.chat.id, user_id)
-        bot.reply_to(message, "تم تنزيل العضو من المدراء ✅")
-
-    @bot.message_handler(commands=['المدراء'])
-    def show_managers(message: Message):
-        managers = load_managers(message.chat.id)
-        text = "قائمة المدراء:\n" + list_to_text(managers, bot, message.chat.id)
+    @bot.message_handler(commands=['الادمنيه'])
+    def list_managers(message: Message):
+        chat_id = message.chat.id
+        managers = load_managers(chat_id)
+        if not managers:
+            return bot.reply_to(message, "لا يوجد أدمنية في هذه المجموعة.")
+        text = "📋 قائمة الأدمنية:\n"
+        for user_id in managers:
+            text += f"• `{user_id}`\n"
         bot.reply_to(message, text, parse_mode="Markdown")
-
-    @bot.message_handler(commands=['مسح_المدراء'])
-    def clear_all_managers(message: Message):
-        clear_managers(message.chat.id)
-        bot.reply_to(message, "تم مسح جميع المدراء من المجموعة.")
